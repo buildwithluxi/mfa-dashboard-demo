@@ -519,11 +519,15 @@ th[aria-sort] .ths { color: var(--navy); } th[aria-sort] .ths .ar { opacity: 1; 
 .pb-s.stay { background: #cfd8e3; border-color: #cfd8e3; } button.pb-s.stay { cursor: pointer; }      /* the icon in the key is not a control */ .pb-s.stay.hom { background: #8494ab; border-color: #8494ab; } button.pb-s.stay:hover { border-color: var(--navy2); }
 .pb-gap { width: 1px; align-self: stretch; background: var(--line); margin: 0 5px; }
 .pb-stayh { font-size: 12.5px; color: #56657a; margin-top: 2px; } .pb-stayh b { color: var(--ink2); }
+/* cost by line: the bar segments and the names in the key open the line, like the table rows */
+.seg > div.click { cursor: pointer; } .seg > div.click:hover { filter: brightness(1.08); }
+.legend button.lgb { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; } .legend button.lgb:hover { color: var(--navy2); text-decoration: underline; }
 
 </style>
 </head>
 <body>
 <noscript>This demonstration needs JavaScript.</noscript>
+<script>window.BUILD = "17 Nov 2026, 16:58";</script>
 <script>
 /* Map data for the Missions map. Generated once; not invented data.
    land: coastlines from Natural Earth 1:50m "land" (public domain), simplified. Land only: no country
@@ -1596,21 +1600,23 @@ window.MAPDATA = {
 
   // cost by line for a period: the split, then each line against its allocation
   // one cost line across the missions in view: where it is spent, largest first; a mission opens the items behind it
-  function lineByMission(l, ms) {
+  function lineByMission(l, ms, y) {
     return () => {
-      const rows = ms.map(m => { const x = D.finSum([m]).lines[l.id]; return { m, a: x.a, b: x.b }; }).sort((p, q) => q.a - p.a), mx = Math.max(1, rows[0].a), ta = rows.reduce((s, r) => s + r.a, 0), tb = rows.reduce((s, r) => s + r.b, 0);
-      return { title: l.name + ' by mission', sub: `January to October 2026 \u00B7 ${plural(rows.length, 'mission')}. Select a mission for the items behind it.`,
+      const rows = ms.map(m => { const x = (y ? D.finYear([m], y) : D.finSum([m])).lines[l.id]; return { m, a: x.a, b: x.b }; }).sort((p, q) => q.a - p.a), mx = Math.max(1, rows[0].a), ta = rows.reduce((s, r) => s + r.a, 0), tb = rows.reduce((s, r) => s + r.b, 0);
+      return { title: l.name + ' by mission' + (y ? ', ' + y : ''), sub: (y ? `${y}, full year` : 'January to October 2026') + ` \u00B7 ${plural(rows.length, 'mission')}. Select a mission for ` + (y ? `its ${y} record.` : 'the items behind it.'),
         body: [table([{ label: 'Mission', f: r => (r._tot ? 'Total' : r.m.name) }, { label: 'Actual', num: 1, f: r => fmtK(r.a), s: r => r.a }, { label: 'Allocation', num: 1, f: r => fmtK(r.b), s: r => r.b },
-          { label: 'Variance', num: 1, f: r => fmtPct(r.a / r.b - 1), s: r => r.a / r.b }, { label: 'Share', f: r => (r._tot ? '' : hbar(r.a / mx, LINE_COL[l.id])) }], rows.concat([{ a: ta, b: tb, _tot: 1 }]), { onRow: r => drillIn(lineView(r.m, l)) }),
-          h('div', { class: 'note' }, 'The items are invented and add up to the line. In the engagement they are the entries in MFA\'s finance records.')] };
+          { label: 'Variance', num: 1, f: r => fmtPct(r.a / r.b - 1), s: r => r.a / r.b }, { label: 'Share', f: r => (r._tot ? '' : hbar(r.a / mx, LINE_COL[l.id])) }], rows.concat([{ a: ta, b: tb, _tot: 1 }]), { onRow: r => drillIn(y ? missionCard(r.m, y) : lineView(r.m, l)) }),
+          h('div', { class: 'note' }, y ? `Items and payments are held for ${NOW_Y}; earlier years are held by mission and cost line.` : 'The items are invented and add up to the line. In the engagement they are the entries in MFA\'s finance records.')] };
     };
   }
   function linesPanel(f, sub, period, src, onLine) {
     const lines = D.LINES.map(l => ({ l, a: f.lines[l.id].a, b: f.lines[l.id].b }));
     return panel('Cost by line', sub,
-      [h('div', { class: 'seg', role: 'img', 'aria-label': 'Cost by line' }, lines.map(x => { const p = x.a / f.a; return h('div', { style: `width:${p * 100}%;background:${LINE_COL[x.l.id]};color:${x.l.id === 'passage' ? '#0b0b0b' : '#fff'}`, tabindex: 0,
-        onpointermove: e => showTip(e, x.l.name, [[LINE_COL[x.l.id], period, fmtM(x.a)], [null, 'of cost', (p * 100).toFixed(0) + '%']]), onpointerleave: hideTip }, p >= 0.08 ? (p * 100).toFixed(0) + '%' : ''); })),
-      legend(lines.map(x => [x.l.name, LINE_COL[x.l.id]])),
+      [h('div', { class: 'seg', role: onLine ? 'group' : 'img', 'aria-label': 'Cost by line' }, lines.map(x => { const p = x.a / f.a, go = onLine && (() => { hideTip(); onLine(x.l); });
+        return h('div', { class: go ? 'click' : null, style: `width:${p * 100}%;background:${LINE_COL[x.l.id]};color:${x.l.id === 'passage' ? '#0b0b0b' : '#fff'}`, tabindex: 0, role: go ? 'button' : null, 'aria-label': go ? x.l.name + ', open' : null,
+          onclick: go, onkeydown: go && (e => { if (e.key === 'Enter') go(); }),
+          onpointermove: e => showTip(e, x.l.name, [[LINE_COL[x.l.id], period, fmtM(x.a)], [null, 'of cost', (p * 100).toFixed(0) + '%']]), onpointerleave: hideTip }, p >= 0.08 ? (p * 100).toFixed(0) + '%' : ''); })),
+      onLine ? h('div', { class: 'legend' }, lines.map(x => h('button', { type: 'button', class: 'lgb', onclick: () => onLine(x.l) }, h('i', { style: 'background:' + LINE_COL[x.l.id] }), x.l.name))) : legend(lines.map(x => [x.l.name, LINE_COL[x.l.id]])),
       h('div', { style: 'height:8px' }),
       table([{ label: 'Cost line', f: x => x.l.name }, { label: 'Actual', num: 1, f: x => (x.a / 1e6).toFixed(2) + 'm' }, { label: 'Allocation', num: 1, f: x => (x.b / 1e6).toFixed(2) + 'm' }, { label: 'Variance', num: 1, f: x => fmtMs(x.a - x.b) }, { label: '%', num: 1, f: x => fmtPct(x.a / x.b - 1) }],
         lines.concat([{ l: { name: 'Total' }, a: f.a, b: f.b, _tot: 1 }]), onLine ? { onRow: x => onLine(x.l), sort: false } : null)], { lvl: 'Descriptive', src });
@@ -1708,7 +1714,7 @@ window.MAPDATA = {
           .concat(p ? [{ label: 'On ' + (y - 1), num: 1, f: l => pctZ(f.lines[l.id].a / p.lines[l.id].a - 1) }] : []), D.LINES),
         h('h4', { class: 'sec' }, 'Year by year'),
         table([{ label: 'Year', f: r => r.y }, { label: 'Officers in post', num: 1, f: r => r.hc }, { label: 'Cost', num: 1, f: r => fmtM(r.a) }, { label: 'vs allocation', f: r => varPill(r.vp) }], rows, { cls: yearRow(y) }),
-        h('div', { class: 'sub', style: 'margin-top:8px' }, `${NOW_Y} is ten months of actuals plus two estimated. The officers at the mission and their rotation dates are on today's record.`)] };
+        h('div', { class: 'sub', style: 'margin-top:8px' }, `${NOW_Y} is ten months of actuals plus two estimated. The officers at the mission and their rotation dates are on today's record. The items, payments and receipts behind a cost line are held for ${NOW_Y}: select \u201C${NOW_Y}, today\u201D above, then a cost line.`)] };
   }
 
   function vSummaryYear(y) {
@@ -1753,7 +1759,7 @@ window.MAPDATA = {
           h('div', { class: 'scroll' }, table([{ label: 'Mission', f: r => r.m.name }, { label: 'Cost ' + y, num: 1, f: r => mm(r.f.a) }, { label: '', f: r => hbar(r.f.a / mx) }, { label: 'vs allocation', f: r => varPill(r.f.vp) }]
             .concat(p ? [{ label: 'On ' + (y - 1), num: 1, f: r => pctZ(r.f.a / r.p.a - 1) }] : [], [{ label: 'Per officer', num: 1, f: r => fmtK(r.f.a / r.f.hc) }]), rows, { onRow: r => drill(missionCard(r.m, y)) })),
           { lvl: 'Descriptive', rules: ['BR-09'], src: 'FN-04, WF-07', note: `Status against allocation: Watch from +${S.T.varAmber}%, Alert from +${S.T.varRed}% (configurable).` }),
-        linesPanel(f, `Share of cost in ${y}, then each line against its allocation.`, String(y), 'FN-04')),
+        linesPanel(f, `Share of cost in ${y}, then each line against its allocation.` + (ms.length > 1 ? ' Select a line for the missions behind it.' : ''), String(y), 'FN-04', ms.length > 1 ? l => drill(lineByMission(l, ms, y)) : null)),
       p ? h('div', { class: 'row even' }, yearChange(ms, y), trend) : trend,
     ];
   }
@@ -3992,7 +3998,7 @@ window.MAPDATA = {
       h('button', { class: 'btn', onclick: () => openSetup() }, 'Missions and posts'),
       h('button', { class: 'btn', onclick: () => drill(rulesView) }, 'Rules and thresholds'))),
     view,
-    h('div', { class: 'foot' }, 'Concept demonstration prepared by Octagon ERP Sdn Bhd for quotation KHELN/ADM/UDP/2026/2KQ1. All officers, figures and classifications are invented; no MFA data is used.', h('span', { class: 'noprint' }, ' Keys 1 to 7 change view; 8 opens MFA\u2019s requirements; 9 opens Ask; 0 opens the draft posting plan.')),
+    h('div', { class: 'foot' }, 'Concept demonstration prepared by Octagon ERP Sdn Bhd for quotation KHELN/ADM/UDP/2026/2KQ1. All officers, figures and classifications are invented; no MFA data is used.', h('span', { class: 'noprint' }, ' Keys 1 to 7 change view; 8 opens MFA\u2019s requirements; 9 opens Ask; 0 opens the draft posting plan.' + (window.BUILD ? ' Version ' + window.BUILD + '.' : ''))),
     scrim, drawer, tipEl, toastEl);
   addEventListener('keydown', e => {
     if (e.key === 'Escape') closeDrawer();
