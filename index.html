@@ -527,7 +527,7 @@ th[aria-sort] .ths { color: var(--navy); } th[aria-sort] .ths .ar { opacity: 1; 
 </head>
 <body>
 <noscript>This demonstration needs JavaScript.</noscript>
-<script>window.BUILD = "17 Nov 2026, 16:58";</script>
+<script>window.BUILD = "17 Nov 2026, 17:02"; window.BUILD_N = 20261117090226;</script>
 <script>
 /* Map data for the Missions map. Generated once; not invented data.
    land: coastlines from Natural Earth 1:50m "land" (public domain), simplified. Land only: no country
@@ -4021,6 +4021,22 @@ window.MAPDATA = {
   if (/^https?:$/.test(location.protocol)) {
     fetch('api/status').then(r => r.json()).then(j => { if (j && j.ai) { AI.avail = AI.on = true; AI.model = j.model || ''; if (S.tab === 'ask') render(); } }).catch(() => { /* plain web server: stay on-device */ });
   }
+  // The live host lets a browser reuse the copy it already has for ten minutes, and a tab can stay open for days, so a reader can be
+  // looking at an older copy than the one published. version.txt is published beside the page. When it names a newer build: on
+  // arrival, load it (once); in a tab that was already open, say so and leave the reload to the reader.
+  let verT = 0;
+  const newer = arriving => {
+    if (!window.BUILD_N || !/^https?:$/.test(location.protocol) || Date.now() - verT < 60000) return;
+    verT = Date.now();
+    fetch('version.txt?' + verT, { cache: 'no-store' }).then(r => (r.ok ? r.text() : '')).then(v => {
+      if (!(+v > window.BUILD_N)) return;
+      const nav = performance.getEntriesByType('navigation')[0];
+      if (arriving && !(nav && nav.type === 'reload')) location.reload();
+      else { toast('A newer version of this demonstration has been published.', 'Reload', () => location.reload()); clearTimeout(toastT); }
+    }).catch(() => { /* no version file: the local server, or a copy saved somewhere else */ });
+  };
+  newer(true);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) newer(false); });
   window.DEMO = { S, AI, receiptView, dashAdd, toast, openCompare, parseQ, followUp, fuSuggest, ANSWERS, setYear, pastYear, openReq, REQS, REQ_RE, openMission, lineView, itemView, officersCostView, officerCostView, openOfficer, openPlan, openSetup, setupRestore, SETUP_RE, planState, planMetrics, planPlace, planRemove, planExtend, planUndo, PLAN_VIEW, PLAN_RE, drill, missionCard, officerCard, trainingList, sessionView, sessionsView, rulesView, render, parseQ, fromAI, normSpec, runChart, CM, dimsFor, splitsFor };   // handy for testing from the console
 })();
 
