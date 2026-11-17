@@ -516,7 +516,7 @@ th[aria-sort] .ths { color: var(--navy); } th[aria-sort] .ths .ar { opacity: 1; 
 .pb-m.solo { border-color: var(--navy); box-shadow: 0 0 0 1px var(--navy); min-height: 0; } .pb-m.solo .nm { font-size: 14.5px; color: var(--navy); } .pb-m.solo .sl { gap: 6px; }
 @media print { .pb-m.solo { box-shadow: none; border-color: var(--line); } }
 /* one mission: officers who stay in post through the round */
-.pb-s.stay { background: #cfd8e3; border-color: #cfd8e3; cursor: pointer; } .pb-s.stay.hom { background: #8494ab; border-color: #8494ab; } button.pb-s.stay:hover { border-color: var(--navy2); }
+.pb-s.stay { background: #cfd8e3; border-color: #cfd8e3; } button.pb-s.stay { cursor: pointer; }      /* the icon in the key is not a control */ .pb-s.stay.hom { background: #8494ab; border-color: #8494ab; } button.pb-s.stay:hover { border-color: var(--navy2); }
 .pb-gap { width: 1px; align-self: stretch; background: var(--line); margin: 0 5px; }
 .pb-stayh { font-size: 12.5px; color: #56657a; margin-top: 2px; } .pb-stayh b { color: var(--ink2); }
 
@@ -1263,7 +1263,7 @@ window.MAPDATA = {
         : h('th', { class: c.num ? 'n' : null }, c.label));
       wrap.replaceChildren(h('table', null,
         h('thead', null, h('tr', null, cols.map(head))),
-        h('tbody', null, rs.map(r => h('tr', { class: (opt.onRow ? 'click ' : '') + (r._tot ? 'tot' : '') + (opt.cls ? ' ' + opt.cls(r) : ''), tabindex: opt.onRow && !r._tot ? 0 : null,
+        h('tbody', null, rs.map(r => h('tr', { class: (opt.onRow && !r._tot ? 'click ' : '') + (r._tot ? 'tot' : '') + (opt.cls ? ' ' + opt.cls(r) : ''), tabindex: opt.onRow && !r._tot ? 0 : null,
           onclick: opt.onRow && !r._tot ? () => opt.onRow(r) : null,
           onkeydown: opt.onRow && !r._tot ? e => { if (e.key === 'Enter') opt.onRow(r); } : null },
           cols.map(c => h('td', { class: c.num ? 'n' : c.nw ? 'nw' : null }, c.f(r))))))));
@@ -1476,7 +1476,7 @@ window.MAPDATA = {
           h('h4', { class: 'sec' }, 'Competencies'),
           h('div', null, o.skills.length ? o.skills.map(k => h('span', { class: 'tag' }, k)) : h('span', { class: 'sub' }, 'None recorded')),
           h('h4', { class: 'sec' }, 'Posting history'),
-          o.past.length ? table([{ label: 'Mission', f: p => D.M[p.mission].name }, { label: 'From', f: p => fmtD(p.from) }, { label: 'To', f: p => fmtD(p.to) }, { label: 'Years', num: 1, f: p => p.len.toFixed(1) }], o.past.slice().reverse()) : h('div', { class: 'sub' }, 'No completed overseas postings.'),
+          o.past.length ? table([{ label: 'Mission', f: p => D.M[p.mission].name }, { label: 'From', f: p => fmtD(p.from) }, { label: 'To', f: p => fmtD(p.to) }, { label: 'Years', num: 1, f: p => p.len.toFixed(1) }], o.past.slice().reverse(), { onRow: p => drillIn(missionCard(D.M[p.mission])), sort: false }) : h('div', { class: 'sub' }, 'No completed overseas postings.'),
           overseas && h('div', { style: 'margin-top:14px' }, h('button', { class: 'btn pri', onclick: () => drillIn(poolView(o.grade, m)) }, 'Show eligible officers for this post')),
         ] };
     };
@@ -1595,7 +1595,17 @@ window.MAPDATA = {
   }
 
   // cost by line for a period: the split, then each line against its allocation
-  function linesPanel(f, sub, period, src) {
+  // one cost line across the missions in view: where it is spent, largest first; a mission opens the items behind it
+  function lineByMission(l, ms) {
+    return () => {
+      const rows = ms.map(m => { const x = D.finSum([m]).lines[l.id]; return { m, a: x.a, b: x.b }; }).sort((p, q) => q.a - p.a), mx = Math.max(1, rows[0].a), ta = rows.reduce((s, r) => s + r.a, 0), tb = rows.reduce((s, r) => s + r.b, 0);
+      return { title: l.name + ' by mission', sub: `January to October 2026 \u00B7 ${plural(rows.length, 'mission')}. Select a mission for the items behind it.`,
+        body: [table([{ label: 'Mission', f: r => (r._tot ? 'Total' : r.m.name) }, { label: 'Actual', num: 1, f: r => fmtK(r.a), s: r => r.a }, { label: 'Allocation', num: 1, f: r => fmtK(r.b), s: r => r.b },
+          { label: 'Variance', num: 1, f: r => fmtPct(r.a / r.b - 1), s: r => r.a / r.b }, { label: 'Share', f: r => (r._tot ? '' : hbar(r.a / mx, LINE_COL[l.id])) }], rows.concat([{ a: ta, b: tb, _tot: 1 }]), { onRow: r => drillIn(lineView(r.m, l)) }),
+          h('div', { class: 'note' }, 'The items are invented and add up to the line. In the engagement they are the entries in MFA\'s finance records.')] };
+    };
+  }
+  function linesPanel(f, sub, period, src, onLine) {
     const lines = D.LINES.map(l => ({ l, a: f.lines[l.id].a, b: f.lines[l.id].b }));
     return panel('Cost by line', sub,
       [h('div', { class: 'seg', role: 'img', 'aria-label': 'Cost by line' }, lines.map(x => { const p = x.a / f.a; return h('div', { style: `width:${p * 100}%;background:${LINE_COL[x.l.id]};color:${x.l.id === 'passage' ? '#0b0b0b' : '#fff'}`, tabindex: 0,
@@ -1603,7 +1613,7 @@ window.MAPDATA = {
       legend(lines.map(x => [x.l.name, LINE_COL[x.l.id]])),
       h('div', { style: 'height:8px' }),
       table([{ label: 'Cost line', f: x => x.l.name }, { label: 'Actual', num: 1, f: x => (x.a / 1e6).toFixed(2) + 'm' }, { label: 'Allocation', num: 1, f: x => (x.b / 1e6).toFixed(2) + 'm' }, { label: 'Variance', num: 1, f: x => fmtMs(x.a - x.b) }, { label: '%', num: 1, f: x => fmtPct(x.a / x.b - 1) }],
-        lines.concat([{ l: { name: 'Total' }, a: f.a, b: f.b, _tot: 1 }]))], { lvl: 'Descriptive', src });
+        lines.concat([{ l: { name: 'Total' }, a: f.a, b: f.b, _tot: 1 }]), onLine ? { onRow: x => onLine(x.l), sort: false } : null)], { lvl: 'Descriptive', src });
   }
 
   /* ---------- Year filter: a past year on the Summary, Workforce and Missions finance views ----------
@@ -1882,7 +1892,7 @@ window.MAPDATA = {
     const over = rows.filter(r => r.f.v > 0).length;
     const ccy = {};
     ms.forEach(m => { const c = ccy[m.ccy] || (ccy[m.ccy] = { c: m.ccy, ms: [], fx: 0, a: 0 }); const x = D.finSum([m]); c.ms.push(m.name); c.fx += x.fx; c.a += x.a; });
-    const crow = Object.values(ccy).sort((a, b) => b.fx - a.fx);
+    const crow = Object.values(ccy).sort((a, b) => b.fx - a.fx), fxK = v => (Math.abs(v) < 500 ? '0' : sg(v) + fmtN(Math.round(Math.abs(v) / 1e3)) + 'k');
     return [
       S.F.mission === 'HQ' || S.F.grade || S.F.dept ? h('div', { class: 'note', style: 'margin:0' }, 'Finance views follow the Mission filter only. Grade and Department filters apply to the workforce views.') : null,
       h('div', { class: 'cards' },
@@ -1901,11 +1911,15 @@ window.MAPDATA = {
           tbl: () => h('div', { class: 'scroll' }, table([{ label: 'Mission', f: r => r.m.name }, { label: 'Cost YTD', num: 1, f: r => (r.f.a / 1e6).toFixed(2) + 'm' }, { label: '', f: r => hbar(r.f.a / mx) }, { label: 'vs allocation', f: r => varPill(r.f.vp) },
             { label: 'Per officer, annualised', num: 1, f: r => fmtK(r.f.a / D.YTD * 12 / r.m.hc) }], rows, { onRow: r => openMission(r.m) })) }),
       h('div', { class: 'row even' },
-        linesPanel(f, 'Share of year-to-date cost, then each line against its allocation.', 'year to date', 'FN-01, FN-02'),
+        linesPanel(f, 'Share of year-to-date cost, then each line against its allocation. Select a line for ' + (ms.length > 1 ? 'the missions behind it.' : 'the items behind it.'), 'year to date', 'FN-01, FN-02',
+          l => drill(ms.length > 1 ? lineByMission(l, ms) : lineView(ms[0], l))),
         panel('Why the cost differs from allocation', 'Diagnostic: the year-to-date variance split into its drivers, in a fixed order (rule BR-07).', [bridge(f), h('h4', { class: 'sec' }, 'Monthly trend'), tr.body],
           { tbl: tr.tbl, lvl: 'Diagnostic', rules: ['BR-07'], src: 'FN-01, FN-02, FN-03', note: 'Vacant posts lower the cost; exchange rates and lease renewals raise it. Each step is computed from the records, so the steps always add up to the variance.' })),
-      panel('Exchange-rate effect by currency', 'Actual rate against the budget rate, and the effect on year-to-date cost. Positive means dearer in Brunei dollars.',
-          h('div', { class: 'scroll' }, table([{ label: 'Currency', f: r => r.c }, { label: 'Missions', f: r => r.ms.join(', ') }, { label: 'Jan–Jun', num: 1, f: r => fmtPct(D.FX[r.c][0] / 100) }, { label: 'Jul–Oct', num: 1, f: r => fmtPct(D.FX[r.c][1] / 100) }, { label: 'Effect YTD', num: 1, f: r => (Math.abs(r.fx) < 500 ? '0' : sg(r.fx) + fmtN(Math.round(Math.abs(r.fx) / 1e3)) + 'k') }], crow)),
+      panel('Exchange-rate effect by currency', 'Actual rate against the budget rate, and the effect on year-to-date cost. Positive means dearer in Brunei dollars. Select a currency for its missions.',
+          h('div', { class: 'scroll' }, table([{ label: 'Currency', f: r => r.c }, { label: 'Missions', f: r => r.ms.join(', ') }, { label: 'Jan–Jun', num: 1, f: r => fmtPct(D.FX[r.c][0] / 100) }, { label: 'Jul–Oct', num: 1, f: r => fmtPct(D.FX[r.c][1] / 100) }, { label: 'Effect YTD', num: 1, f: r => fxK(r.fx), s: r => r.fx }], crow, { onRow: r => { const ml = ms.filter(m => m.ccy === r.c);
+            drill(ml.length === 1 ? missionCard(ml[0]) : () => ({ title: 'Missions paid in ' + r.c, sub: `${plural(ml.length, 'mission')}, January to October 2026. Select a mission for its record.`,
+              body: [table([{ label: 'Mission', f: m => m.name }, { label: 'Cost YTD', num: 1, f: m => fmtM(D.finSum([m]).a), s: m => D.finSum([m]).a }, { label: 'Exchange-rate effect', num: 1, f: m => fxK(D.finSum([m]).fx), s: m => D.finSum([m]).fx },
+                { label: 'vs allocation', f: m => varPill(D.finSum([m]).vp), s: m => D.finSum([m]).vp }], ml, { onRow: m => drillIn(missionCard(m)) })] })); } })),
           { lvl: 'Diagnostic', src: 'FN-03', note: 'The Singapore dollar is at par with the Brunei dollar, so Singapore carries no exchange-rate effect.' }),
     ];
   }
@@ -2778,8 +2792,8 @@ window.MAPDATA = {
         [`At ${L + 1} years the same post costs `, b(fmtK(eq(L) - eq(L + 1)) + ' less a year'), ', because the move is spread over a longer stay.'],
       ],
       blocks: [
-        panel('Where the money goes: one officer, one year', m.name + ', annualised from January to October 2026.',
-          table([{ label: 'Cost line', f: l => [h('i', { style: `display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;background:${LINE_COL[l.id]}` }), l.name] }, { label: 'B$ a year', num: 1, f: l => fmtN(Math.round(ann(l) / 100) * 100) }, { label: 'Share', num: 1, f: l => (ann(l) / (f.a / D.YTD * 12 / m.hc) * 100).toFixed(0) + '%' }, { label: '', f: l => hbar(ann(l) / ann(big[0]), LINE_COL[l.id]) }], D.LINES),
+        panel('Where the money goes: one officer, one year', m.name + ', annualised from January to October 2026. Select a line for the items behind it at this mission.',
+          table([{ label: 'Cost line', f: l => [h('i', { style: `display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;background:${LINE_COL[l.id]}` }), l.name] }, { label: 'B$ a year', num: 1, f: l => fmtN(Math.round(ann(l) / 100) * 100) }, { label: 'Share', num: 1, f: l => (ann(l) / (f.a / D.YTD * 12 / m.hc) * 100).toFixed(0) + '%' }, { label: '', f: l => hbar(ann(l) / ann(big[0]), LINE_COL[l.id]) }], D.LINES, { onRow: l => drill(lineView(m, l)), sort: false }),
           { lvl: 'Descriptive', src: 'FN-02, WF-01', note: 'Mission operations and local staff is the mission’s running cost shared across its officers.' }),
         rankPanel,
         panel('Why this mission differs from its allocation', 'Year-to-date variance for ' + m.name + ' split into its drivers.', bridge(f), { lvl: 'Diagnostic', src: 'FN-01 to FN-03' }),
@@ -2878,8 +2892,9 @@ window.MAPDATA = {
             h('div', { style: 'margin-top:10px' }, h('button', { class: 'btn', onclick: () => drill(sessionsView(cy, sOpt(null))) }, `Show all ${plural(ses.length, 'session')}`))], { lvl: 'Descriptive', src: 'WF-03' }) : null,
         panel('Training days by grade', `Average days per officer in ${cy}. Select a row for officers with no training${cur ? ' yet' : ''}.`,
           table([{ label: 'Grade', nw: 1, f: r => div(r.g) }, { label: 'Officers', num: 1, f: r => r.l.length }, { label: 'Avg days', num: 1, f: r => r.avg.toFixed(1) }, { label: cur ? 'No training yet' : 'No training', num: 1, f: r => r.none.length }, { label: 'Status', f: r => (r.avg < T.minTrain ? pill('a', 'Below minimum') : pill('g', 'Meets minimum')) }], rows, { onRow: r => drill(officerList(div(r.g) + ': no training days in ' + cy, null, r.none, ['dept', dayCol])) }), { lvl: 'Diagnostic', src: 'WF-03', rules: ['BR-09'] }),
-        panel(cur ? 'What would it take to reach the minimum?' : 'How far short of the minimum?', cur ? 'Extra training days needed so that no officer is below the minimum.' : `Extra training days that would have brought every officer to the minimum in ${cy}.`,
-          table([{ label: 'Grade', nw: 1, f: r => div(r.g) }, { label: 'Officers below minimum', num: 1, f: r => r.l.filter(o => td(o) < T.minTrain).length }, { label: 'Extra days needed', num: 1, f: r => fmtN(Math.round(r.short)) }], rows), { lvl: cur ? 'Scenario and decision support' : 'Diagnostic', src: 'WF-03', rules: ['BR-09'] }),
+        panel(cur ? 'What would it take to reach the minimum?' : 'How far short of the minimum?', (cur ? 'Extra training days needed so that no officer is below the minimum.' : `Extra training days that would have brought every officer to the minimum in ${cy}.`) + ' Select a row for the officers below the minimum.',
+          table([{ label: 'Grade', nw: 1, f: r => div(r.g) }, { label: 'Officers below minimum', num: 1, f: r => r.l.filter(o => td(o) < T.minTrain).length }, { label: 'Extra days needed', num: 1, f: r => fmtN(Math.round(r.short)) }], rows,
+            { onRow: r => drill(officerList(`${div(r.g)}: below ${T.minTrain} training days in ${cy}`, null, r.l.filter(o => td(o) < T.minTrain), ['dept', dayCol])), sort: false }), { lvl: cur ? 'Scenario and decision support' : 'Diagnostic', src: 'WF-03', rules: ['BR-09'] }),
       ] };
   }
   function aSkills(p) {
@@ -2911,9 +2926,9 @@ window.MAPDATA = {
       ],
       actions: [h('button', { class: 'btn', onclick: () => drill(officerList(m ? 'Officers posted at ' + m.name : 'Officers in service', sc.label.join(', '), list, ['dept', 'tig'])) }, 'Show the ' + list.length + ' officers'), m ? [' ', h('button', { class: 'btn', onclick: () => drill(missionCard(m)) }, 'Open the mission record')] : null],
       blocks: [panel('Headcount by grade' + (m ? '' : ' and location'), 'Select a column for the officer list.',
-        [chart(w => columnChart(w, { cats: D.GRADES.map(div), series: m ? [{ name: 'Officers at ' + m.name, color: C.s2, vals: D.GRADES.map(g => byG(g).length) }]
-          : [{ name: 'Headquarters', color: C.s1, vals: D.GRADES.map(g => byG(g).filter(o => o.loc === 'HQ').length) }, { name: 'Overseas missions', color: C.s2, vals: D.GRADES.map(g => byG(g).filter(o => o.loc !== 'HQ').length) }],
-          cap: m ? i => byG(D.GRADES[i]).length || '' : null, onClick: i => drill(officerList(div(D.GRADES[i]) + (m ? ', ' + m.name : ''), 'Officers in service', byG(D.GRADES[i]), ['dept', 'tig'])), label: 'Headcount by grade' })),
+        [chart(w => columnChart(w, { cats: grades.map(div), series: m ? [{ name: 'Officers at ' + m.name, color: C.s2, vals: grades.map(g => byG(g).length) }]
+          : [{ name: 'Headquarters', color: C.s1, vals: grades.map(g => byG(g).filter(o => o.loc === 'HQ').length) }, { name: 'Overseas missions', color: C.s2, vals: grades.map(g => byG(g).filter(o => o.loc !== 'HQ').length) }],
+          cap: m ? i => byG(grades[i]).length || '' : null, onClick: i => drill(officerList(div(grades[i]) + (m ? ', ' + m.name : ''), 'Officers in service', byG(grades[i]), ['dept', 'tig'])), label: 'Headcount by grade' })),
         m ? null : legend([['Headquarters', C.s1], ['Overseas missions', C.s2]])], { lvl: 'Descriptive', src: 'WF-01' }),
       m ? panel('Rotations falling due at ' + m.name, 'Officers by the quarter their posting reaches its full length. Select a column for the list.', rotChart(rotBuckets(list)), { lvl: 'Descriptive', src: 'WF-01, WF-02' }) : null] };
   }
@@ -3582,9 +3597,9 @@ window.MAPDATA = {
             { label: 'Typical for intake', num: 1, f: r => (r.typ == null ? '\u2013' : r.typ.toFixed(1) + ' (' + r.n + ')') },
             { label: 'Difference', f: r => (r.typ == null ? '\u2013' : Math.abs(r.mine - r.typ) < 0.25 ? 'In line' : Math.abs(r.mine - r.typ).toFixed(1) + (r.mine < r.typ ? ' years sooner' : ' years later')) }], steps),
           { lvl: 'Diagnostic', src: 'WF-01', note: [b('An indicator, not an assessment. '), 'Typical is the median for the intake, with the number of officers in brackets. The record shows facts; any judgement about an officer stays with MFA management.'] }),
-        panel('Posting history', overseas ? `Now at ${m.name} since ${fmtD(o.postStart)}; rotation due ${fmtD(D.rotDue(o, R))}.` : 'At headquarters. Completed overseas postings, most recent first.',
+        panel('Posting history', (overseas ? `Now at ${m.name} since ${fmtD(o.postStart)}; rotation due ${fmtD(D.rotDue(o, R))}.` : 'At headquarters. Completed overseas postings, most recent first.') + (o.past.length || overseas ? ' Select a posting for the mission\'s record.' : ''),
           [o.past.length || overseas ? table([{ label: 'Mission', f: p => D.M[p.mission].name }, { label: 'From', nw: 1, f: p => fmtD(p.from) }, { label: 'To', nw: 1, f: p => (p.to ? fmtD(p.to) : 'present') }, { label: 'Years', num: 1, f: p => p.len.toFixed(1) }],
-            (overseas ? [{ mission: o.loc, from: o.postStart, to: null, len: D.yearsBetween(o.postStart, AS_AT) }] : []).concat(o.past.slice().reverse())) : h('div', { class: 'sub' }, 'No overseas posting yet.'),
+            (overseas ? [{ mission: o.loc, from: o.postStart, to: null, len: D.yearsBetween(o.postStart, AS_AT) }] : []).concat(o.past.slice().reverse()), { onRow: p => drill(missionCard(D.M[p.mission])), sort: false }) : h('div', { class: 'sub' }, 'No overseas posting yet.'),
           overseas ? h('div', { class: 'pfilt', style: 'margin-top:12px' }, h('button', { class: 'btn', onclick: () => drill(poolView(o.grade, m)) }, 'Show eligible officers for this post'), myPost ? h('button', { class: 'btn', onclick: () => openPlan(myPost.id) }, 'Open this post in the draft posting plan') : null) : null],
           { lvl: 'Descriptive', src: 'WF-02', rules: ['BR-02', 'BR-03'] })),
       h('div', { class: 'row even' },
