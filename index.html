@@ -1554,9 +1554,10 @@ window.MAPDATA = {
             kv('Cost, Jan to Oct 2026', fmtM(f.a)), kv('Against allocation', [fmtMs(f.v) + ' ', varPill(f.vp)]),
             kv('Cost per officer, annualised', fmtK(f.a / D.YTD * 12 / m.hc)), kv('Past rotation date', over.length)),
           h('h4', { class: 'sec' }, 'Cost lines, year to date'),
+          h('div', { class: 'sub', style: 'margin:-2px 0 6px' }, 'Select a line for the items behind it, then an item for its payments and receipt.'),
           table([{ label: 'Cost line', f: l => [h('i', { style: `display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;background:${LINE_COL[l.id]}` }), l.name] },
             { label: 'Actual', num: 1, f: l => fmtK(f.lines[l.id].a) }, { label: 'Allocation', num: 1, f: l => fmtK(f.lines[l.id].b) },
-            { label: 'Variance', num: 1, f: l => fmtPct(f.lines[l.id].a / f.lines[l.id].b - 1) }], D.LINES),
+            { label: 'Variance', num: 1, f: l => fmtPct(f.lines[l.id].a / f.lines[l.id].b - 1) }], D.LINES, { onRow: l => drillIn(lineView(m, l)), sort: false }),      // the same drill-down as the mission page: line, item, payment, receipt
           h('h4', { class: 'sec' }, 'What moved the number'), bridge(f),
           h('h4', { class: 'sec' }, 'Officers at this mission'),
           table([OC.id, OC.grade, OC.title, OC.inpost, { label: 'Rotation due', f: o => [fmtD(D.rotDue(o, S.R)), ' ', D.isOverdue(o, S.R) ? pill('r', 'Past due') : null] }], list, { onRow: o => drillIn(officerCard(o)) }),
