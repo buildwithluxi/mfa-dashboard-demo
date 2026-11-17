@@ -4,6 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Concept demonstration by Octagon ERP Sdn Bhd: a workforce and overseas missions dashboard on invented data. No MFA data is used.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Workforce &amp; Overseas Missions Dashboard">
+<meta property="og:description" content="Concept demonstration by Octagon ERP Sdn Bhd, on invented data. No MFA data is used.">
+<meta property="og:url" content="https://mfa-demo.octagonerp.net/">
+<meta property="og:image" content="https://mfa-demo.octagonerp.net/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#1f3a5f">
 <title>Workforce &amp; Overseas Missions Dashboard (concept demonstration)</title>
 <style>
 :root {
@@ -523,11 +533,33 @@ th[aria-sort] .ths { color: var(--navy); } th[aria-sort] .ths .ar { opacity: 1; 
 .seg > div.click { cursor: pointer; } .seg > div.click:hover { filter: brightness(1.08); }
 .legend button.lgb { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; } .legend button.lgb:hover { color: var(--navy2); text-decoration: underline; }
 
+/* Navigation below 1140px: every tab stays on screen. The tabs take their own row under the title, and on a phone they wrap onto two rows.
+   Before, the row scrolled sideways with nothing to show it, so Evidence and Ask were out of sight on a tablet and five of the eight tabs on a phone. */
+@media (max-width: 1140px) {
+  .top .in { flex-direction: column; align-items: stretch; gap: 0; }
+  .top h1 { padding: 11px 0 0; }
+  .tabs { overflow: visible; flex-wrap: wrap; }
+  .tabs button { padding: 9px 12px 8px; }
+}
+@media (max-width: 820px) { .tabs button { padding: 9px 10px 8px; } }
+@media (max-width: 640px) {
+  .top h1 { font-size: 15px; }
+  .tabs { margin: 0 -5px; }
+  .tabs button { padding: 7px 7px 6px; font-size: 13px; border-bottom-width: 2px; }
+  .tabs .tabn { margin-left: 4px; }
+}
+/* first-visit note */
+.cd-note { background: #fff8e6; border-bottom: 1px solid #f0dfae; font-size: 13px; color: #4a3b12; }
+.cd-note .in { max-width: 1440px; margin: 0 auto; padding: 8px 22px; display: flex; align-items: center; gap: 14px; justify-content: space-between; }
+.cd-note .btn { flex: none; }
+@media (max-width: 640px) { .cd-note .in { padding: 8px 16px; align-items: flex-start; } }
+@media print { .cd-note { display: none !important; } }
+
 </style>
 </head>
 <body>
 <noscript>This demonstration needs JavaScript.</noscript>
-<script>window.BUILD = "17 Nov 2026, 17:03"; window.BUILD_N = 20261117090347;</script>
+<script>window.BUILD = "18 Nov 2026, 06:28"; window.BUILD_N = 20261117222839;</script>
 <script>
 /* Map data for the Missions map. Generated once; not invented data.
    land: coastlines from Natural Earth 1:50m "land" (public domain), simplified. Land only: no country
@@ -2601,6 +2633,7 @@ window.MAPDATA = {
      The question is matched on this device to a catalogue of analyses. Every number in an answer
      comes from the same calculations as the other views; nothing is generated or sent anywhere. */
   const SUGGEST = [
+    'What needs my attention?',
     'Who is due for rotation, and what will it cost?',
     'Which missions are over allocation, and why?',
     'Where will we be short of senior officers by 2029?',
@@ -2618,8 +2651,19 @@ window.MAPDATA = {
     SEL: 'south korea|korea', DEL: 'india|delhi', CAI: 'egypt', PAR: 'france', BRU: 'belgium', BER: 'germany', DOH: 'qatar', AUH: 'uae|emirates', ISB: 'pakistan',
   }).flatMap(([id, names]) => names.split('|').map(n => [n, D.M[id]])));
 
+  // A question typed in Malay is read through its key words (the answer is still in English).
+  const MALAY = [[/\bberapa (?:ramai |banyak |orang )?/g, 'how many '], [/\bpegawai(?:-pegawai)?\b/g, 'officers'], [/\bkakitangan\b/g, 'staff'], [/\b(?:di )?luar negar[ai]\b/g, 'overseas'],
+    [/\b(?:akan |yang )?bersara\b|\bpersaraan\b/g, 'retire'], [/\bkos\b/g, 'cost'], [/\bperbelanjaan\b|\bbelanja\b/g, 'spend'], [/\bbajet\b|\bbelanjawan\b/g, 'budget'], [/\bperuntukan\b/g, 'allocation'],
+    [/\bmisi\b|\bkedutaan\b|\bperwakilan\b/g, 'mission'], [/\blatihan\b|\bkursus\b/g, 'training'], [/\bkemahiran\b|\bkepakaran\b/g, 'skills'], [/\bbahasa\b/g, 'language'],
+    [/\bkekosongan\b|\bjawatan kosong\b/g, 'vacancies'], [/\bgiliran\b|\bpertukaran\b|\brotasi\b/g, 'rotation'], [/\bsiapa\b/g, 'who'], [/\bpaling (?:tinggi|mahal|besar)\b|\btertinggi\b|\btermahal\b/g, 'highest'],
+    [/\btahun (?:depan|hadapan)\b/g, 'next year'], [/\bmelebihi\b|\blebih (?:dari|daripada)\b/g, 'over'], [/\bramalan\b|\bunjuran\b/g, 'forecast'], [/\bringkasan\b|\brumusan\b/g, 'summary'],
+    [/\bbantuan\b|\btolong\b/g, 'help'], [/\bpenggantian?\b/g, 'succession'], [/\bperumahan\b|\bsewa\b/g, 'housing'], [/\bpendidikan\b|\bpersekolahan\b/g, 'education'], [/\bperubatan\b/g, 'medical'], [/\belaun\b/g, 'allowance']];
+  const HELP_RE = /^\s*(?:hi|hello|hey|salam|assalamualaikum|good (?:morning|afternoon|evening)|help(?: me)?|what can (?:you|i|this|it) (?:do|ask)|what (?:can|should|do) i ask|how (?:do|does|can) (?:i|this|it) (?:use|work)[\w ]*|what is this|how to use(?: this| it)?|(?:show (?:me )?)?examples?)\s*$/;
+  const ATT_RE = /\b(?:needs?|requires?|deserves?) (?:my |our |your |the )?(?:\w+ )?attention\b|\bwhat needs\b|\b(?:biggest|main|key|top|major|urgent) (?:risks?|issues?|concerns?|problems?|priorit\w+|matters?)\b|\bwhat should (?:i|we) (?:know|worry about|look at|focus on|be worried about)\b|\b(?:executive )?summary\b|\boverview\b|\bhighlights?\b|\balerts?\b|\bred flags?\b|\bwhat(?:'s| is) (?:wrong|urgent|important)\b|\bbrief(?:ing)?(?: me)?\b/;
+
   function parseQ(raw) {
-    const q = ' ' + raw.toLowerCase().replace(/[?!,;:]/g, ' ').replace(/\s+/g, ' ') + ' ';
+    let q = ' ' + raw.toLowerCase().replace(/[?!,;:]/g, ' ').replace(/\s+/g, ' ') + ' ';
+    MALAY.forEach(x => { q = q.replace(x[0], x[1]); });
     const has = re => re.test(q), num = re => { const x = q.match(re); return x ? parseFloat(x[1]) : null; };
     const me = MALIAS.find(a => new RegExp('\\b' + a[0] + '\\b').test(q)), m = me ? me[1] : null;
     const gm = q.match(/\bdiv(?:ision)?\.? ?(iii|ii|i|3|2|1)\b/);
@@ -2631,7 +2675,8 @@ window.MAPDATA = {
     const pct = num(/(\d+(?:\.\d+)?) ?(?:%|per ?cent)/), yrs = num(/(\d(?:\.5)?)[ -]?(?:years?|yrs?)\b/);
     const down = has(/\bcut|reduc|lower|fewer|less\b|decreas|\bdown\b|shrink|clos/);
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-    if (has(/\bwho should\b|\bwhom should\b|\bwho is (?:the )?best\b|\bbest (?:officer|candidate|person)|\brecommend (?:an?|the|some|me)? ?(?:officer|candidate|person|name)|\bshould (?:we|i) (?:promote|post|appoint|send)\b|\bwho (?:deserves|to promote|to appoint|to post|gets)\b|\brank (?:the |our )?(?:officers|candidates)/)) p.intent = 'guard';
+    if (HELP_RE.test(q)) p.intent = 'help';
+    else if (has(/\bwho should\b|\bwhom should\b|\bwho is (?:the )?best\b|\bbest (?:officer|candidate|person)|\brecommend (?:an?|the|some|me)? ?(?:officer|candidate|person|name)|\bshould (?:we|i) (?:promote|post|appoint|send)\b|\bwho (?:deserves|to promote|to appoint|to post|gets)\b|\brank (?:the |our )?(?:officers|candidates)/)) p.intent = 'guard';
     else if (!wi && has(/\b(?:chart|graph|plot|trend|year by year|by year|per year|yearly|over time|month by month|monthly|by month|by quarter|quarterly|breakdown|break down|compar\w*|table of|histor\w*|by (?:mission|grade|division|department|region|cost line|line|age)|per (?:mission|grade|department)|across missions)\b/)) { p.intent = 'chart'; p.chart = parseChart(q, p); }
     else if (has(/posting|tour|rotation/) && yrs != null && (wi || has(/-year|year postings?|years? long/))) { const v = clamp(yrs, 2, 5); p.intent = 'whatif'; p.lever = { name: v + '-year postings', set: { postLen: v, postLenHard: v }, kind: 'postLen' }; }
     else if (has(/allowance/) && pct != null) { const v = clamp(down ? -pct : pct, -10, 15); p.intent = 'whatif'; p.lever = { name: 'Allowance rates ' + fmtPct(v / 100, 0), set: { allowPct: v }, kind: 'allow' }; }
@@ -2645,13 +2690,19 @@ window.MAPDATA = {
       p.intent = 'whatif'; p.lever = { name: (v > 0 ? v + ' more' : Math.abs(v) + ' fewer') + ' officers overseas', set: { postsDelta: v }, kind: 'posts' };
     }
     else if (has(/cost (?:of|to) (?:post|send|keep|station|hav|plac)|cost per officer|per officer|how much (?:does|is|do|would) .*(?:officer|posting|post )/)) p.intent = 'costpost';
-    else if (has(/rotat|overdue|past due|past their|due for|due to return|coming home|\breplace|postings? (?:due|end)|tours? (?:due|end)/)) p.intent = 'rotation';
-    else if (has(/over (?:the |their )?(?:allocation|budget)|overspen|overrun|variance|budget|allocation|\bspend|why .*cost|cost.*why|expens|cost driver|costs? (?:going|rising|up)|mission costs?|financ/)) p.intent = 'cost';
+    else if (has(/rotat|overdue|past due|past their|due for|due to return|coming home|\breplace|postings? (?:due|end)|tours? (?:due|end)|posted (?:for )?too long|too long|longest[- ](?:posted|serving)|overstay|exceed\w* (?:their |the )?(?:tour|posting|term)/)) p.intent = 'rotation';
+    else if (!wi && has(/housing|\brent(?:al|s)?\b|education|school(?:ing| fees?)?\b|medical|insurance|passage|relocation|allowances?|local staff|running costs?/) && !has(/over (?:the |their )?(?:allocation|budget)|overspen|overrun|variance|\bwhy\b|train|\bcourses?\b|workshop|seminar|\bhow many\b|\bleave\b|\bsick\b/)) {
+      // a cost line named on its own: that line by mission, or year by year when one mission is named
+      const ql = q.replace(/\brent(?:al|s)?\b/g, 'housing').replace(/\binsurance\b/g, 'medical').replace(/\brelocation\b/g, 'passage').replace(/\brunning costs?\b/g, 'operations');
+      p.intent = 'chart'; p.chart = parseChart((has(/education|school/) ? ql.replace(/allowances?/g, ' ') : ql) + ' cost ' + (m ? 'year by year ' : 'by mission '), p); }
+    else if (has(/over (?:the |their )?(?:allocation|budget)|overspen|overrun|variance|budget|allocation|\bspend|why .*cost|cost.*why|expens|cost driver|costs? (?:going|rising|up)|mission costs?|financ|forecast\w* (?:the |of )?(?:cost|spend|budget)|(?:cost|spend|budget)\w* (?:forecast|projection|outlook)|costs? (?:in|for|by) 20\d\d/)
+      || (!m && has(/how many (?:missions|embassies|high commissions|consulates)|costs? (?:of |per |by )?(?:the |each |our )?missions?|missions? (?:with|that) (?:the )?(?:highest|most)|(?:highest|most|largest|biggest)[\w ]{0,14}\bcosts?\b/))) p.intent = 'cost';
     else if (has(/train|\bcourses?\b|\bworkshops?\b|\bseminars?\b/)) p.intent = 'training';
     else if (has(/skill|competenc|language|arabic|mandarin|french|expertise|capabilit/)) p.intent = 'skills';
     else if (has(/success|pipeline|short of|shortage|vacanc|senior officers|ready (?:to|for)|promot/)) p.intent = 'succession';
     else if (has(/retir|attrition|leaving|leave the service|\bexits?\b/)) { p.intent = 'succession'; p.retire = true; }
     else if (has(/how many\b.*\b(?:officers?|staff|people|diplomats|posted)\b|head ?count|size of (?:the |our )?workforce|workforce (?:profile|overview)|age profile/)) p.intent = 'headcount';
+    else if (!wi && !m && has(ATT_RE)) p.intent = 'attention';
     else if (m) p.intent = 'mission';
     else if (wi) p.intent = 'whatifhelp';
     return p;
@@ -3292,7 +3343,19 @@ window.MAPDATA = {
       startRow && h('section', { class: 'panel noprint' }, h('div', { class: 'sub' }, 'Quick additions'), startRow)];
   }
 
-  const ANSWERS = { chart: aChart, rotation: aRotation, cost: aCost, succession: aSuccession, costpost: aCostPost, whatif: aWhatIf, guard: aGuard, mission: aMission, training: aTraining, skills: aSkills, headcount: aHeadcount };
+  // "What needs my attention?", "summary", "biggest risks": the list My dashboard opens with, for the whole service
+  function aAttention() {
+    const att = attention(D.officers, D.MISSIONS), al = att.filter(x => x[0] === 'r').length, wa = att.length - al;
+    const whole = fn => () => { S.F.mission = ''; S.F.grade = ''; S.F.dept = ''; S.F.year = NOW_Y; fn(); };
+    return { title: 'What needs attention', params: ['Whole service', 'As at 31 October 2026'], scoped: [], wide: true,
+      summary: [
+        att.length ? [b(`${att.length} ${att.length === 1 ? 'matter is' : 'matters are'} past a threshold today`), `: ${al} at Alert level and ${wa} at Watch level.`] : ['No measure is past its threshold today.'],
+        ['The thresholds are MFA\u2019s own, set under Rules and thresholds. Each item below opens the records behind it.'],
+      ],
+      actions: [h('button', { class: 'btn', onclick: () => goto('summary') }, 'Open the Summary')],
+      blocks: [att.length ? attPanel(att, 'Workforce and mission cost, for the whole service. Select an item for its evidence.', whole) : null] };
+  }
+  const ANSWERS = { chart: aChart, rotation: aRotation, cost: aCost, succession: aSuccession, costpost: aCostPost, whatif: aWhatIf, guard: aGuard, mission: aMission, training: aTraining, skills: aSkills, headcount: aHeadcount, attention: aAttention };
   /* ---------- follow-up questions ----------
      A question that only makes sense after the one before it ("and for Division II only?", "what about
      London?", "make it 5 years", "as a table") keeps the previous analysis and changes only what it
@@ -3442,7 +3505,7 @@ window.MAPDATA = {
       const yq = q.match(/\b(202[3-6])\b/); p.year = yq ? +yq[1] : prev ? (p.year || prev.p.year || null) : null;      // a past year named in the question (used by the training answer); a follow-up keeps it
       A.p = p; A.via = via; A.note = note || ''; A.busy = false;
       if (ANSWERS[p.intent]) A.thread = (prev ? A.thread : []).concat([{ q, p, via, note: A.note }]);       // the conversation: a follow-up joins it, a new question starts it again
-      else if (!A.log.includes(q)) A.log.push(q);
+      else if (p.intent !== 'help' && !A.log.includes(q)) A.log.push(q);
       if (S.tab === 'ask') S.askPaint();
     };
     const back = i => { A.thread = A.thread.slice(0, i + 1); const e = A.thread[i]; A.q = input.value = e.q; A.p = e.p; A.via = e.via; A.note = e.note; A.busy = false; paint(); };
@@ -3455,6 +3518,7 @@ window.MAPDATA = {
       const num = q.match(/\bOFF[- ]?(\d{1,4})\b/i), who = num && D.officers.find(x => x.id === 'OFF-' + num[1].padStart(4, '0'));
       if (who) return openOfficer(who);                      // an officer number opens that record; nothing is sent to the AI
       if (PLAN_RE.test(q) && !/\bwho should\b|\bwhat if\b/i.test(q)) return openPlan();
+      if (/\b(?:vacant|unfilled|empty) (?:posts?|positions?)\b|\b(?:posts?|positions?)\b[\w ]{0,20}\b(?:vacant|unfilled|empty)\b/i.test(q) && !/\bwhat if\b/i.test(q)) return openPlan();      // "which posts are vacant": the posting plan lists them
       if (REQ_RE.test(q)) return openReq();
       if (DASH_RE.test(q)) return goto('dash');
       if (DASH_ADD_RE.test(q)) {                               // "add it to my dashboard": keeps the chart on screen
@@ -3479,9 +3543,9 @@ window.MAPDATA = {
       const fu = A.p.fu, how = h('div', { class: 'how' }, A.via === 'ai' ? [pill('n', 'Read by the AI model'), A.p.reading ? ' “' + A.p.reading + '”' : ''] : [pill('n', 'Matched on this device'), A.note ? ' ' + A.note : ''],
         fu && h('div', { class: 'fu-how' }, h('span', { class: 'tag fu' }, 'Follow-up'), ' to “' + fu.from + '”' + (fu.text ? ': ' + fu.text + '.' : '')));
       const fn = ANSWERS[A.p.intent];
-      if (!fn) return setKids(out, trail(), h('section', { class: 'panel' }, h('div', { class: 'ph' }, h('div', null, h('h3', null, A.p.intent === 'whatifhelp' ? 'Which lever should change?' : 'This question is not in the catalogue yet'))), how,
-        h('div', { style: 'margin-top:8px' }, A.p.intent === 'whatifhelp' ? 'Name the change and its size, for example: postings of 4 years, allowances up 5%, exchange rates 5% against us, 10 more officers overseas.' : 'The demonstration answers questions on rotation, mission cost, succession and retirement, training, competencies, the cost of a posting and what-if changes to policy, and draws charts of cost, allocation, officers, training, leavers and rotations.'),
-        A.log.length ? h('div', { class: 'note' }, b('Logged for the requirements register: '), A.log.map(x => '“' + x + '”').join(', '), '. In the engagement, questions the dashboard cannot answer are recorded and prioritised with MFA.') : null));
+      if (!fn) return setKids(out, trail(), h('section', { class: 'panel' }, h('div', { class: 'ph' }, h('div', null, h('h3', null, A.p.intent === 'whatifhelp' ? 'Which lever should change?' : A.p.intent === 'help' ? 'What you can ask' : 'This question is not in the catalogue yet'))), A.p.intent === 'help' ? null : how,
+        h('div', { style: 'margin-top:8px' }, A.p.intent === 'whatifhelp' ? 'Name the change and its size, for example: postings of 4 years, allowances up 5%, exchange rates 5% against us, 10 more officers overseas.' : (A.p.intent === 'help' ? 'Type a question in your own words, or pick one of the suggestions above. ' : '') + 'The demonstration answers questions on what needs attention, rotation, mission cost, succession and retirement, training, competencies, the cost of a posting and what-if changes to policy, and draws charts of cost, allocation, officers, training, leavers and rotations.'),
+        A.log.length && A.p.intent !== 'help' ? h('div', { class: 'note' }, b('Logged for the requirements register: '), A.log.map(x => '“' + x + '”').join(', '), '. In the engagement, questions the dashboard cannot answer are recorded and prioritised with MFA.') : null));
       const a = fn(A.p), bl = a.blocks.filter(Boolean), rows = [], used = a.scoped || [];
       const unused = [A.p.m && !used.includes('m') ? A.p.m.name : null, A.p.grade && !used.includes('grade') ? div(A.p.grade) : null].filter(Boolean);
       for (let i = 0; i < bl.length; i += a.wide ? 1 : 2) rows.push(bl[i + 1] && !a.wide ? h('div', { class: 'row even' }, bl[i], bl[i + 1]) : bl[i]);
@@ -4000,6 +4064,18 @@ window.MAPDATA = {
     view,
     h('div', { class: 'foot' }, 'Concept demonstration prepared by Octagon ERP Sdn Bhd for quotation KHELN/ADM/UDP/2026/2KQ1. All officers, figures and classifications are invented; no MFA data is used.', h('span', { class: 'noprint' }, ' Keys 1 to 7 change view; 8 opens MFA\u2019s requirements; 9 opens Ask; 0 opens the draft posting plan.' + (window.BUILD ? ' Version ' + window.BUILD + '.' : ''))),
     scrim, drawer, tipEl, toastEl);
+  // iPhone and iPad zoom the whole page when a field with text smaller than 16px is tapped, and stay zoomed. Capping the scale stops
+  // that; pinching to zoom still works there. Left alone on other devices, where the cap would switch pinch zoom off.
+  if (/iP(?:hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+    const vp = document.querySelector('meta[name="viewport"]'); if (vp) vp.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1');
+  }
+  // Shown until dismissed, on this device: a reader who arrives by a link, with nobody to introduce the page, is told first that nothing here is real.
+  if (!store.get('N', {}).seen) {      // store.get always returns an object
+    const note = h('div', { class: 'cd-note noprint', role: 'note' }, h('div', { class: 'in' },
+      h('span', null, b('Concept demonstration. '), 'Every officer, figure and classification here is invented; no MFA data is used. Select any figure to see what is behind it, or open Ask to put a question in your own words.'),
+      h('button', { class: 'btn sm', onclick() { store.set('N', { seen: 1 }); note.remove(); } }, 'Got it')));
+    view.before(note);
+  }
   addEventListener('keydown', e => {
     if (e.key === 'Escape') closeDrawer();
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName) || e.metaKey || e.ctrlKey || e.altKey) return;
